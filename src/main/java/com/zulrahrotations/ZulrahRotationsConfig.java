@@ -60,6 +60,9 @@ public interface ZulrahRotationsConfig extends Config
 	@ConfigSection(name = "Kill stats", description = "Kill counter and timer read from chat messages", position = 3)
 	String SECTION_KILLS = "kills";
 
+	@ConfigSection(name = "Learner", description = "Post-kill summaries of damage taken and supplies used, by phase", position = 4)
+	String SECTION_LEARNER = "learner";
+
 	// ---- display -------------------------------------------------------------------------
 
 	@ConfigItem(
@@ -262,6 +265,32 @@ public interface ZulrahRotationsConfig extends Config
 		position = 0
 	)
 	default boolean showKillStats()
+	{
+		return true;
+	}
+
+	// ---- learner -------------------------------------------------------------------------
+
+	@ConfigItem(
+		keyName = "killSummaries",
+		name = "Kill summaries",
+		description = "After each kill, show damage taken, venom, food, potions and prayer used, broken down by the phases you stepped through",
+		section = SECTION_LEARNER,
+		position = 0
+	)
+	default boolean killSummaries()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "killSummaryChat",
+		name = "Summary in chat",
+		description = "Also post the one-line kill summary as a game message",
+		section = SECTION_LEARNER,
+		position = 1
+	)
+	default boolean killSummaryChat()
 	{
 		return true;
 	}

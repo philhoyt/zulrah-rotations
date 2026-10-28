@@ -30,6 +30,12 @@ public final class KillStats
 	 * Feed a game chat message (tags already stripped). Returns true when it was a Zulrah
 	 * kill count or fight duration message.
 	 */
+	/** Whether a game message is the kill count line that marks the end of a kill. */
+	public static boolean isKillCount(String message)
+	{
+		return message != null && KILL_COUNT.matcher(message).find();
+	}
+
 	public boolean onChatMessage(String message)
 	{
 		if (message == null)

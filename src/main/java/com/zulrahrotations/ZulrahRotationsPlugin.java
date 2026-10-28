@@ -4,6 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.inject.Provides;
 import com.zulrahrotations.data.Rotation;
+import com.zulrahrotations.learner.KillRecord;
+import com.zulrahrotations.learner.KillRecorder;
+import com.zulrahrotations.learner.SessionHistory;
 import com.zulrahrotations.overlay.ZulrahRotationsOverlay;
 import com.zulrahrotations.state.KillStats;
 import com.zulrahrotations.state.RotationTracker;
@@ -22,11 +25,16 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.Hitsplat;
+import net.runelite.api.HitsplatID;
+import net.runelite.api.Skill;
 import net.runelite.api.WorldView;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.HitsplatApplied;
+import net.runelite.api.events.StatChanged;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
@@ -48,8 +56,11 @@ import net.runelite.client.util.Text;
  *
  * Rules note for reviewers: the only game state this plugin reads is
  * (1) the map region and instance flag, used to show or hide UI, enable hotkeys and reset
- *     when the player leaves the shrine, and
- * (2) chat messages, used for the kill counter, the fight duration and the death reset.
+ *     when the player leaves the shrine,
+ * (2) chat messages, used for the kill counter, the fight duration, the death reset and
+ *     the food and potion counts in kill summaries, and
+ * (3) the player's own character only: hitsplats that land on the local player and the
+ *     local player's prayer level, used for the post-kill summaries.
  * Zulrah itself (NPC id, form, animation, position, spawns, projectiles) is never read.
  * Every phase change is made by the player through a button, a hotkey or a chat command.
  */
@@ -92,6 +103,11 @@ public class ZulrahRotationsPlugin extends Plugin
 	private final RotationTracker tracker = new RotationTracker();
 	@Getter
 	private final KillStats killStats = new KillStats();
+	/** Records damage, supplies and prayer per manually selected phase for the kill summaries. */
+	@Getter
+	private final KillRecorder recorder = new KillRecorder();
+	@Getter
+	private final SessionHistory history = new SessionHistory();
 
 	private ZulrahRotationsPanel panel;
 	private NavigationButton navButton;
@@ -116,7 +132,7 @@ public class ZulrahRotationsPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		panel = new ZulrahRotationsPanel(tracker, killStats, config);
+		panel = new ZulrahRotationsPanel(tracker, killStats, recorder, history, config);
 		navButton = NavigationButton.builder()
 			.tooltip("Zulrah Rotations")
 			.icon(ShrineDiagram.render(Rotation.opening(), 16, DiagramOrientation.SOUTH, false, false))
@@ -156,6 +172,7 @@ public class ZulrahRotationsPlugin extends Plugin
 
 	private void onTrackerChanged()
 	{
+		recorder.onPhase(tracker.getPhaseNumber(), tracker.getCurrentPhase());
 		persistState();
 		rebuildPanel();
 	}
@@ -234,6 +251,10 @@ public class ZulrahRotationsPlugin extends Plugin
 	private void onEnterInstance()
 	{
 		killStats.startTimer();
+		if (config.killSummaries())
+		{
+			recorder.start(tracker.getPhaseNumber(), tracker.getCurrentPhase(), client.getBoostedSkillLevel(Skill.PRAYER));
+		}
 		if (config.assistanceMessages() && !tracker.isRotationKnown() && !assistanceGiven)
 		{
 			assistanceGiven = true;
@@ -245,6 +266,7 @@ public class ZulrahRotationsPlugin extends Plugin
 	private void onLeaveInstance()
 	{
 		assistanceGiven = false;
+		recorder.abandon();
 		if (killStats.isTimerRunning())
 		{
 			killStats.clearTimer();
@@ -288,14 +310,74 @@ public class ZulrahRotationsPlugin extends Plugin
 			return;
 		}
 		String message = Text.removeTags(event.getMessage());
+		boolean killCount = KillStats.isKillCount(message);
 		if (killStats.onChatMessage(message))
 		{
+			if (killCount)
+			{
+				finishKill();
+			}
+			else
+			{
+				history.updateLastDuration(killStats.getLastFightDuration());
+			}
 			rebuildPanel();
 			return;
 		}
-		if (config.resetOnDeath() && message.startsWith(DEATH_MESSAGE))
+		recorder.onChatMessage(message);
+		if (message.startsWith(DEATH_MESSAGE))
 		{
-			tracker.reset();
+			finishKill();
+			if (config.resetOnDeath())
+			{
+				tracker.reset();
+			}
+		}
+	}
+
+	// ---- learner: the player's own hitsplats and prayer, bucketed by manual phase ---------
+
+	/** Close the kill being recorded, if any, and publish its summary. */
+	private void finishKill()
+	{
+		KillRecord record = recorder.finish(
+			tracker.isRotationKnown() ? tracker.getRotation().getDisplayName() : null,
+			killStats.elapsedText());
+		if (record == null)
+		{
+			return;
+		}
+		history.add(record);
+		rebuildPanel();
+		if (config.killSummaryChat())
+		{
+			chat("Zulrah Rotations: " + record.summaryText());
+		}
+	}
+
+	@Subscribe
+	public void onHitsplatApplied(HitsplatApplied event)
+	{
+		if (!recorder.isRecording() || event.getActor() != client.getLocalPlayer())
+		{
+			return;
+		}
+		Hitsplat hitsplat = event.getHitsplat();
+		int type = hitsplat.getHitsplatType();
+		if (type == HitsplatID.HEAL || type == HitsplatID.BLOCK_ME
+			|| type == HitsplatID.DISEASE || type == HitsplatID.DISEASE_BLOCKED)
+		{
+			return;
+		}
+		recorder.onDamage(hitsplat.getAmount(), type == HitsplatID.VENOM || type == HitsplatID.POISON);
+	}
+
+	@Subscribe
+	public void onStatChanged(StatChanged event)
+	{
+		if (event.getSkill() == Skill.PRAYER)
+		{
+			recorder.onPrayerLevel(event.getBoostedLevel());
 		}
 	}
 
@@ -396,6 +478,10 @@ public class ZulrahRotationsPlugin extends Plugin
 		if (!ZulrahRotationsConfig.GROUP.equals(event.getGroup()))
 		{
 			return;
+		}
+		if (!config.killSummaries())
+		{
+			recorder.abandon();
 		}
 		updateNavButton();
 		rebuildPanel();

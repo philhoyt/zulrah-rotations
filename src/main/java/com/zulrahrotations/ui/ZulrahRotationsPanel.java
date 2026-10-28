@@ -3,6 +3,10 @@ package com.zulrahrotations.ui;
 import com.zulrahrotations.ZulrahRotationsConfig;
 import com.zulrahrotations.data.Phase;
 import com.zulrahrotations.data.Rotation;
+import com.zulrahrotations.learner.KillRecord;
+import com.zulrahrotations.learner.KillRecorder;
+import com.zulrahrotations.learner.PhaseStat;
+import com.zulrahrotations.learner.SessionHistory;
 import com.zulrahrotations.state.KillStats;
 import com.zulrahrotations.state.RotationChoice;
 import com.zulrahrotations.state.RotationTracker;
@@ -36,8 +40,9 @@ import net.runelite.client.util.SwingUtil;
 
 /**
  * Side panel: status, the current phase with a large shrine diagram, the next phase, the
- * rotation picker when the rotations split, previous/next buttons, kill stats and a
- * clickable timeline of the whole rotation.
+ * rotation picker when the rotations split, previous/next buttons, kill stats, the last kill
+ * summary with its per-phase breakdown, session totals and a clickable timeline of the
+ * whole rotation.
  *
  * Every button here calls the tracker directly; the plugin listens to the tracker for
  * persistence and overlay updates. Nothing in this panel touches the game client.
@@ -53,17 +58,22 @@ public class ZulrahRotationsPanel extends PluginPanel
 
 	private final RotationTracker tracker;
 	private final KillStats killStats;
+	private final KillRecorder recorder;
+	private final SessionHistory history;
 	private final ZulrahRotationsConfig config;
 
 	private final JLabel statusLabel = new JLabel();
 	private final JLabel phaseCountLabel = new JLabel();
 	private final JPanel body = new JPanel();
 
-	public ZulrahRotationsPanel(RotationTracker tracker, KillStats killStats, ZulrahRotationsConfig config)
+	public ZulrahRotationsPanel(RotationTracker tracker, KillStats killStats, KillRecorder recorder,
+		SessionHistory history, ZulrahRotationsConfig config)
 	{
 		super(false);
 		this.tracker = tracker;
 		this.killStats = killStats;
+		this.recorder = recorder;
+		this.history = history;
 		this.config = config;
 
 		setLayout(new BorderLayout(0, 8));
@@ -127,6 +137,13 @@ public class ZulrahRotationsPanel extends PluginPanel
 		if (config.showKillStats())
 		{
 			body.add(buildKillStats());
+		}
+		if (config.killSummaries())
+		{
+			body.add(sectionLabel("Last kill"));
+			body.add(buildLastKillCard());
+			body.add(sectionLabel("Session"));
+			body.add(buildSessionCard());
 		}
 		body.add(sectionLabel(tracker.isRotationKnown() ? tracker.getRotation().getDisplayName() + " timeline" : "Timeline"));
 		body.add(buildTimeline());
@@ -352,6 +369,136 @@ public class ZulrahRotationsPanel extends PluginPanel
 			sb.append("<br>Timer: ").append(timer).append(killStats.isTimerRunning() ? "" : " (done)");
 		}
 		return sb.append("</html>").toString();
+	}
+
+	// ---- learner: last kill and session ----------------------------------------------------
+
+	private JPanel buildLastKillCard()
+	{
+		JPanel card = card();
+		card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+		KillRecord last = history.last();
+		if (last == null)
+		{
+			card.add(muted(recorder.isRecording()
+				? "Recording this kill. The summary appears when it ends."
+				: "Your next kill will be summarised here."));
+			return card;
+		}
+
+		JLabel title = new JLabel((last.isDied() ? "Died" : "Kill")
+			+ (last.getDuration() != null ? " in " + last.getDuration() : "")
+			+ "  \u00b7  " + last.getRotationName());
+		title.setFont(FontManager.getRunescapeBoldFont());
+		title.setForeground(last.isDied() ? ColorScheme.PROGRESS_ERROR_COLOR : Color.WHITE);
+		title.setAlignmentX(LEFT_ALIGNMENT);
+		card.add(title);
+		card.add(Box.createVerticalStrut(4));
+		card.add(leftAligned(detail("Damage", last.getDamage()
+			+ (last.getVenomDamage() > 0 ? " (" + last.getVenomDamage() + " venom)" : "")
+			+ ", " + last.getHits() + (last.getHits() == 1 ? " hit" : " hits"))));
+		card.add(leftAligned(detail("Supplies", last.getFood() + " food, " + last.getPotions()
+			+ (last.getPotions() == 1 ? " potion" : " potions"))));
+		card.add(leftAligned(detail("Prayer", last.getPrayerUsed() + " points")));
+		PhaseStat worst = last.worstPhase();
+		if (worst != null)
+		{
+			card.add(leftAligned(detail("Worst", worst.shortLabel() + " (" + worst.getDamage() + ")")));
+		}
+		if (!last.getPhases().isEmpty())
+		{
+			card.add(Box.createVerticalStrut(6));
+			for (PhaseStat p : last.getPhases())
+			{
+				card.add(leftAligned(phaseRow(p, p == worst)));
+			}
+		}
+		if (recorder.isRecording())
+		{
+			card.add(Box.createVerticalStrut(4));
+			card.add(muted("Recording the current kill."));
+		}
+		return card;
+	}
+
+	private JPanel phaseRow(PhaseStat p, boolean worst)
+	{
+		JPanel row = new JPanel(new BorderLayout(6, 0));
+		row.setOpaque(false);
+		JLabel name = new JLabel(p.shortLabel());
+		name.setFont(FontManager.getRunescapeSmallFont());
+		name.setForeground(worst ? ColorScheme.BRAND_ORANGE : MUTED);
+		StringBuilder sb = new StringBuilder();
+		if (p.getDamage() > 0)
+		{
+			sb.append(p.getDamage()).append(" dmg");
+			if (p.getVenomDamage() > 0)
+			{
+				sb.append(" (").append(p.getVenomDamage()).append(" venom)");
+			}
+		}
+		if (p.getFood() > 0)
+		{
+			sb.append(sb.length() > 0 ? ", " : "").append(p.getFood()).append(" food");
+		}
+		if (p.getPotions() > 0)
+		{
+			sb.append(sb.length() > 0 ? ", " : "").append(p.getPotions()).append(p.getPotions() == 1 ? " potion" : " potions");
+		}
+		JLabel value = new JLabel(sb.length() > 0 ? sb.toString() : "clean");
+		value.setFont(FontManager.getRunescapeSmallFont());
+		value.setForeground(sb.length() > 0 ? (worst ? ColorScheme.BRAND_ORANGE : Color.WHITE) : MUTED);
+		value.setHorizontalAlignment(SwingConstants.RIGHT);
+		row.add(name, BorderLayout.CENTER);
+		row.add(value, BorderLayout.EAST);
+		return row;
+	}
+
+	private JPanel buildSessionCard()
+	{
+		JPanel card = card();
+		card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+		if (history.size() == 0)
+		{
+			card.add(muted("No kills recorded yet this session."));
+			return card;
+		}
+		card.add(leftAligned(detail("Kills", history.kills()
+			+ (history.deaths() > 0 ? ", " + history.deaths() + (history.deaths() == 1 ? " death" : " deaths") : ""))));
+		card.add(leftAligned(detail("Avg damage", String.valueOf(history.averageDamage()))));
+		if (history.bestDuration() != null)
+		{
+			card.add(leftAligned(detail("Best time", history.bestDuration())));
+		}
+		card.add(leftAligned(detail("Supplies", history.totalFood() + " food, " + history.totalPotions() + " potions")));
+		String costliest = history.costliestPhase();
+		if (costliest != null)
+		{
+			card.add(leftAligned(detail("Costliest", costliest)));
+		}
+		JButton clear = new JButton("Clear history");
+		clear.setFocusable(false);
+		clear.setToolTipText("Forget the kills recorded this session");
+		clear.addActionListener(e ->
+		{
+			history.clear();
+			rebuild();
+		});
+		JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		buttons.setOpaque(false);
+		buttons.add(clear);
+		card.add(Box.createVerticalStrut(6));
+		card.add(leftAligned(buttons));
+		return card;
+	}
+
+	private static JLabel muted(String text)
+	{
+		JLabel label = new JLabel(text);
+		label.setFont(FontManager.getRunescapeSmallFont());
+		label.setForeground(MUTED);
+		label.setAlignmentX(LEFT_ALIGNMENT);
+		return label;
 	}
 
 	// ---- timeline ------------------------------------------------------------------------

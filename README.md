@@ -40,6 +40,10 @@ Diagram options: ![Colourblind palette, Jad phase](docs/preview-colourblind-jad.
   fight duration, and a timer that starts when you enter the shrine and stops on the kill
   count message.
 - **Colourblind palette** for the form colours.
+- **Kill summaries.** After each kill or death: time, rotation, damage taken (venom separated),
+  hits, food, potions and prayer points used, broken down by the phases you stepped through,
+  with the worst phase called out. A session card keeps kills, deaths, average damage, best
+  time, supplies used and the phase that has cost you the most. Also posted as one chat line.
 
 ## Using it
 
@@ -70,6 +74,8 @@ Diagram options: ![Colourblind palette, Jad phase](docs/preview-colourblind-jad.
 | Behaviour | Hotkeys everywhere | Off | Let hotkeys work outside the Zulrah area |
 | Hotkeys | Next, Previous, Reset, Rotation 1 to 4 | Unset | Keybinds |
 | Kill stats | Show kill stats | On | Kills, last fight duration and timer |
+| Learner | Kill summaries | On | Record damage, supplies and prayer per phase and show the last kill and session cards |
+| Learner | Summary in chat | On | Post the one-line kill summary as a game message |
 
 ## Rules compliance
 
@@ -87,7 +93,12 @@ mechanic starts or ends. This plugin is built as a manually triggered helper:
 - **Game state that is read, and why:**
   - the map region ids and the instance flag, to show or hide the sidebar icon and overlay,
     to enable hotkeys only near Zulrah, and to reset when the player leaves the shrine;
-  - game chat messages, for the kill count, the fight duration and the "you are dead" reset.
+  - game chat messages, for the kill count, the fight duration, the "you are dead" reset, and
+    the "You eat" and "You drink" lines that count food and potions;
+  - the player's own character only: hitsplats that land on the local player, and the local
+    player's prayer level, for the kill summaries. Damage is bucketed by the phase the player
+    selected by hand, so the summaries say nothing about Zulrah that the player did not type in.
+    Summaries are shown only after a kill ends; nothing new is drawn during the fight.
 - **No in-scene drawing.** Nothing is drawn on the game world. A tile marker for the suggested
   stand tile, driven purely by the manually selected phase, was considered and left out; it is
   listed below as an open question for reviewers rather than shipped.
@@ -120,3 +131,5 @@ Rotation data: the OSRS Wiki community. License attributions are in `LICENSE`.
   timeline, in-game overlay, `::zulrot` and `::zulphase` commands, per-account memory, reset
   on leave and death, kill counter and timer from chat, colourblind palette.
 - Side panel opens by itself on arrival at Zulrah (configurable).
+- Kill summaries: per-phase damage, venom, food, potions and prayer after each kill, plus
+  session totals, read only from the player's own hitsplats, prayer level and chat.
