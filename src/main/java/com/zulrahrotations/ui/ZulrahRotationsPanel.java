@@ -189,9 +189,15 @@ public class ZulrahRotationsPanel extends PluginPanel
 		text.add(form);
 
 		text.add(leftAligned(detail("Stand", phase.getTile().getDisplayName())));
-		text.add(leftAligned(detail("Pray", phase.prayerText())));
+		if (config.showPrayerDetails())
+		{
+			text.add(leftAligned(detail("Pray", phase.prayerText())));
+		}
 		text.add(leftAligned(detail("Attack with", phase.getForm().getRecommendedStyle())));
-		text.add(leftAligned(detail("Expect", phase.eventsText())));
+		if (config.showPrayerDetails())
+		{
+			text.add(leftAligned(detail("Expect", phase.eventsText())));
+		}
 		if (phase.getNote() != null)
 		{
 			JLabel note = new JLabel(phase.getNote());
@@ -335,7 +341,10 @@ public class ZulrahRotationsPanel extends PluginPanel
 		text.add(title);
 		text.add(form);
 		text.add(stand);
-		text.add(pray);
+		if (config.showPrayerDetails())
+		{
+			text.add(pray);
+		}
 		card.add(text, BorderLayout.CENTER);
 		return card;
 	}

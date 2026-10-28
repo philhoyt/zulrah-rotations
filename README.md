@@ -67,6 +67,7 @@ Diagram options: ![Colourblind palette, Jad phase](docs/preview-colourblind-jad.
 | Display | Colourblind palette | Off | Teal, orange and blue instead of green, red and blue |
 | Display | Sidebar icon only at Zulrah | On | Hide the sidebar icon away from Zul-Andra and the shrine |
 | Display | Open panel on arrival | On | Open the side panel when you reach Zul-Andra or the shrine |
+| Display | Show prayer and attack details | On | Print the recommended prayer and expected attacks for the selected phase. Off, the plugin is a position guide only |
 | Behaviour | Reset when leaving | On | Back to the opening phase when you leave the shrine instance |
 | Behaviour | Reset on death | On | Back to the opening phase when the game says you died |
 | Behaviour | Remember progress per account | On | Store rotation and phase in the account profile |
@@ -90,6 +91,8 @@ mechanic starts or ends. This plugin is built as a manually triggered helper:
   spawns, projectiles, hitsplats or graphics objects. There is no rotation detection.
 - **Prayer and form text is static guide data** attached to the phase the player selected,
   the same as a printed rotation chart. It does not react to anything Zulrah does.
+  The prayer and expected-attack lines can be switched off with "Show prayer and attack
+  details"; with it off the plugin shows only form, position and stand tile.
 - **Game state that is read, and why:**
   - the map region ids and the instance flag, to show or hide the sidebar icon and overlay,
     to enable hotkeys only near Zulrah, and to reset when the player leaves the shrine;
@@ -133,3 +136,4 @@ Rotation data: the OSRS Wiki community. License attributions are in `LICENSE`.
 - Side panel opens by itself on arrival at Zulrah (configurable).
 - Kill summaries: per-phase damage, venom, food, potions and prayer after each kill, plus
   session totals, read only from the player's own hitsplats, prayer level and chat.
+- "Show prayer and attack details" option to run the plugin as a position guide only.

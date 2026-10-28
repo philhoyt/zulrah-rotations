@@ -90,12 +90,15 @@ public class ZulrahRotationsOverlay extends OverlayPanel
 			.right(phase.getTile().getDisplayName())
 			.rightColor(FormPalette.TILE)
 			.build());
-		panelComponent.getChildren().add(LineComponent.builder()
-			.left("Pray")
-			.leftColor(MUTED)
-			.right(phase.getForm().isJad() ? phase.getPrayer().getShortName() + " first, swap" : phase.getPrayer().getShortName())
-			.rightColor(Color.WHITE)
-			.build());
+		if (config.showPrayerDetails())
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left("Pray")
+				.leftColor(MUTED)
+				.right(phase.getForm().isJad() ? phase.getPrayer().getShortName() + " first, swap" : phase.getPrayer().getShortName())
+				.rightColor(Color.WHITE)
+				.build());
+		}
 
 		if (config.overlayNextPhase())
 		{

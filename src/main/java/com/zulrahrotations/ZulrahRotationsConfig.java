@@ -149,6 +149,18 @@ public interface ZulrahRotationsConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		keyName = "showPrayerDetails",
+		name = "Show prayer and attack details",
+		description = "Print the recommended prayer and the expected attacks for the selected phase. Off, the plugin is a position guide only",
+		section = SECTION_DISPLAY,
+		position = 7
+	)
+	default boolean showPrayerDetails()
+	{
+		return true;
+	}
+
 	// ---- behaviour -----------------------------------------------------------------------
 
 	@ConfigItem(
