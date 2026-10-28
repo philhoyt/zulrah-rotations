@@ -69,7 +69,10 @@ public class ZulrahRotationsPanel extends PluginPanel
 	public ZulrahRotationsPanel(RotationTracker tracker, KillStats killStats, KillRecorder recorder,
 		SessionHistory history, ZulrahRotationsConfig config)
 	{
-		super(false);
+		// Wrapped: RuneLite places the panel in a scroll pane, so the sidebar can scroll and its
+		// minimum height stays small. An unwrapped panel reports its full content height as its
+		// minimum, and the client then grows the whole window to fit it on every rebuild.
+		super(true);
 		this.tracker = tracker;
 		this.killStats = killStats;
 		this.recorder = recorder;
