@@ -134,6 +134,18 @@ public interface ZulrahRotationsConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		keyName = "openPanelOnArrival",
+		name = "Open panel on arrival",
+		description = "Open the side panel when you reach Zul-Andra or the shrine",
+		section = SECTION_DISPLAY,
+		position = 6
+	)
+	default boolean openPanelOnArrival()
+	{
+		return true;
+	}
+
 	// ---- behaviour -----------------------------------------------------------------------
 
 	@ConfigItem(

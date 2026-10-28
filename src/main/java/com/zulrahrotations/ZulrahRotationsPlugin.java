@@ -218,6 +218,10 @@ public class ZulrahRotationsPlugin extends Plugin
 		{
 			inZulrahArea = nowArea;
 			updateNavButton();
+			if (nowArea && config.openPanelOnArrival())
+			{
+				openPanel();
+			}
 		}
 
 		if (pendingRestore)
@@ -417,6 +421,17 @@ public class ZulrahRotationsPlugin extends Plugin
 				clientToolbar.removeNavigation(button);
 			}
 		});
+	}
+
+	/** Brings the side panel to the front. Queued after any pending sidebar icon change. */
+	private void openPanel()
+	{
+		NavigationButton button = navButton;
+		if (button == null || !navVisible)
+		{
+			return;
+		}
+		SwingUtilities.invokeLater(() -> clientToolbar.openPanel(button));
 	}
 
 	// ---- hotkeys -------------------------------------------------------------------------

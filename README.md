@@ -43,8 +43,8 @@ Diagram options: ![Colourblind palette, Jad phase](docs/preview-colourblind-jad.
 
 ## Using it
 
-1. Enable the plugin. The sidebar icon appears when you are in Zul-Andra or the shrine
-   (configurable).
+1. Enable the plugin. When you reach Zul-Andra or the shrine the sidebar icon appears and
+   the panel opens on its own (both configurable).
 2. Set hotkeys for Next, Previous and Reset in the plugin settings. Rotation hotkeys 1 to 4
    are optional.
 3. Start a kill. The panel shows the opening phase. When Zulrah dives, pick the branch that
@@ -62,6 +62,7 @@ Diagram options: ![Colourblind palette, Jad phase](docs/preview-colourblind-jad.
 | Display | Diagram orientation | South at top | Which compass direction is at the top of the diagram |
 | Display | Colourblind palette | Off | Teal, orange and blue instead of green, red and blue |
 | Display | Sidebar icon only at Zulrah | On | Hide the sidebar icon away from Zul-Andra and the shrine |
+| Display | Open panel on arrival | On | Open the side panel when you reach Zul-Andra or the shrine |
 | Behaviour | Reset when leaving | On | Back to the opening phase when you leave the shrine instance |
 | Behaviour | Reset on death | On | Back to the opening phase when the game says you died |
 | Behaviour | Remember progress per account | On | Store rotation and phase in the account profile |
@@ -118,3 +119,4 @@ Rotation data: the OSRS Wiki community. License attributions are in `LICENSE`.
 - First release: rotation picker, phase stepper with hotkeys, side panel with diagram and
   timeline, in-game overlay, `::zulrot` and `::zulphase` commands, per-account memory, reset
   on leave and death, kill counter and timer from chat, colourblind palette.
+- Side panel opens by itself on arrival at Zulrah (configurable).
